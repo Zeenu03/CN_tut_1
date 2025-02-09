@@ -1,27 +1,36 @@
 import socket
-import time
 
-HOST = '127.0.0.1'  # Localhost
-PORT = 12345        # Port to listen on
+PORT = 65433
+BUFFER_SIZE = 1024
 
-# Create a socket
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind((HOST, PORT))  # Bind to the specified host and port
-server_socket.listen(1)  # Allow only 1 client at a time
+def process_request(request):
+    choice, input_data = request.split(":", 1)
 
-print(f"Single-Process Server listening on {HOST}:{PORT}")
+    if choice == "1":
+        return input_data.swapcase()
+    elif choice == "2":
+        try:
+            return str(eval(input_data))  # WARNING: Eval can be insecure!
+        except:
+            return "Invalid expression"
+    elif choice == "3":
+        return input_data[::-1]
+    else:
+        return "Invalid choice"
 
-while True:
-    conn, addr = server_socket.accept()  # Accept a client connection
-    print(f"Connected by {addr}")
+def main():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(("0.0.0.0", PORT))
+    server_socket.listen(1)  # Only one client at a time
 
-    data = conn.recv(1024)  # Receive data from the client
-    if not data:
-        break
+    print(f"Single-Process Server listening on port {PORT}")
 
-    time.sleep(3)  # Introduce a 3-second delay
-    reversed_data = data.decode()[::-1]  # Reverse the string
-    conn.sendall(reversed_data.encode())  # Send the reversed string back
+    while True:
+        client_socket, _ = server_socket.accept()
+        request = client_socket.recv(BUFFER_SIZE).decode()
+        response = process_request(request)
+        client_socket.send(response.encode())
+        client_socket.close()
 
-    conn.close()  # Close the connection
-    print(f"Connection with {addr} closed")
+if _name_ == "_main_":
+    main()
